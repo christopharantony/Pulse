@@ -17,16 +17,16 @@ export default function HomePage() {
 
         <div className="flex flex-wrap gap-4">
           <Link
-            href="/"
+            href="/register"
             className="rounded-full bg-cyan-500 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
           >
-            Open dashboard
+            Get started
           </Link>
           <Link
-            href="/"
+            href="/login"
             className="rounded-full border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-500"
           >
-            Learn more
+            Sign in
           </Link>
         </div>
       </div>
