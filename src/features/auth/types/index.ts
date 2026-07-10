@@ -11,6 +11,15 @@ export interface AuthUser {
   updatedAt: string;
 }
 
+export interface SessionDto {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastUsedAt: string;
+  isCurrent: boolean;
+}
+
 export interface ApiEnvelope<T> {
   success: boolean;
   message: string;

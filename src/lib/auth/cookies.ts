@@ -1,17 +1,10 @@
 import 'server-only';
 import { cookies } from 'next/headers';
 import { serverEnv } from '@/lib/env.server';
+import { parseDurationSeconds } from '@/lib/duration';
 import { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE } from '@/lib/auth/cookie-names';
 
 export { ACCESS_TOKEN_COOKIE, REFRESH_TOKEN_COOKIE };
-
-function parseDurationSeconds(input: string): number {
-  const match = /^(\d+)([smhd])$/.exec(input);
-  if (!match) throw new Error(`Invalid duration string: ${input}`);
-  const value = Number(match[1]);
-  const multipliers = { s: 1, m: 60, h: 3600, d: 86400 } as const;
-  return value * multipliers[match[2] as keyof typeof multipliers];
-}
 
 function baseCookieOptions() {
   return {
@@ -22,15 +15,25 @@ function baseCookieOptions() {
   };
 }
 
-export async function setAuthCookies(accessToken: string, refreshToken: string): Promise<void> {
+export async function setAuthCookies(
+  accessToken: string,
+  refreshToken: string,
+  options?: { rememberMe?: boolean }
+): Promise<void> {
   const store = await cookies();
   store.set(ACCESS_TOKEN_COOKIE, accessToken, {
     ...baseCookieOptions(),
     maxAge: parseDurationSeconds(serverEnv.ACCESS_TOKEN_EXPIRES),
   });
+
+  // "Remember me": a long-lived persistent cookie. Otherwise omit maxAge entirely so the
+  // refresh cookie is a browser-session cookie, cleared when the browser closes — the DB-side
+  // Session.expiresAt still enforces the real server-side cap either way.
   store.set(REFRESH_TOKEN_COOKIE, refreshToken, {
     ...baseCookieOptions(),
-    maxAge: parseDurationSeconds(serverEnv.REFRESH_TOKEN_EXPIRES),
+    ...(options?.rememberMe
+      ? { maxAge: parseDurationSeconds(serverEnv.REMEMBER_ME_REFRESH_EXPIRES) }
+      : {}),
   });
 }
 

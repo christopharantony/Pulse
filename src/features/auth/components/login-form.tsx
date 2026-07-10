@@ -7,10 +7,17 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { MailIcon, MoveRightIcon, ShieldXIcon } from '@animateicons/react/lucide';
 import { Input } from '@/components/ui/input';
 import { PasswordInput } from '@/components/ui/password-input';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { useLogin } from '@/features/auth/hooks/use-login';
 import { loginSchema, type LoginInput } from '@/features/auth/validators/auth.schema';
 import { extractApiErrorMessage } from '@/features/auth/utils/extract-api-error';
+import type { z } from 'zod';
+
+// rememberMe has a zod .default(), so the parsed output (LoginInput) always has it defined
+// while the raw form values (before parsing) may not — RHF's 3-generic form lets the form use
+// the input shape and handleSubmit hand back the fully-defaulted output shape.
+type LoginFormValues = z.input<typeof loginSchema>;
 
 export function LoginForm() {
   const router = useRouter();
@@ -20,8 +27,9 @@ export function LoginForm() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginInput>({
+  } = useForm<LoginFormValues, unknown, LoginInput>({
     resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '', rememberMe: false },
   });
 
   const onSubmit = handleSubmit((values) => {
@@ -62,6 +70,13 @@ export function LoginForm() {
           error={errors.password?.message}
           {...register('password')}
         />
+
+        <div className="flex items-center justify-between">
+          <Checkbox label="Remember me" {...register('rememberMe')} />
+          <Link href="/forgot-password" className="text-sm font-medium text-cyan-400 hover:text-cyan-300">
+            Forgot password?
+          </Link>
+        </div>
 
         <Button type="submit" isLoading={isSubmitting || login.isPending} className="group">
           Sign in

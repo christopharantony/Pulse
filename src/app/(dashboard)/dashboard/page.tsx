@@ -1,11 +1,13 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ActivityIcon, LoaderCircleIcon, LogoutIcon } from '@animateicons/react/lucide';
+import { ActivityIcon, LoaderCircleIcon, LogoutIcon, ShieldCheckIcon } from '@animateicons/react/lucide';
 import { Button } from '@/components/ui/button';
 import { useCurrentUser } from '@/features/auth/hooks/use-current-user';
 import { useLogout } from '@/features/auth/hooks/use-logout';
+import { UnverifiedBanner } from '@/features/auth/components/unverified-banner';
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -38,11 +40,22 @@ export default function DashboardPage() {
             <ActivityIcon size={22} className="text-cyan-400" />
             <span className="text-lg font-semibold tracking-tight">Pulse</span>
           </div>
-          <Button variant="ghost" className="w-auto px-4" onClick={handleLogout} isLoading={logout.isPending}>
-            <LogoutIcon size={16} />
-            Sign out
-          </Button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/settings/security"
+              className="flex items-center gap-2 text-sm font-medium text-slate-300 hover:text-slate-100"
+            >
+              <ShieldCheckIcon size={16} />
+              Security
+            </Link>
+            <Button variant="ghost" className="w-auto px-4" onClick={handleLogout} isLoading={logout.isPending}>
+              <LogoutIcon size={16} />
+              Sign out
+            </Button>
+          </div>
         </header>
+
+        {user && !user.emailVerified && <UnverifiedBanner />}
 
         <div className="rounded-2xl border border-slate-800 bg-slate-900/50 p-8">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-cyan-400">

@@ -10,7 +10,9 @@ export async function POST() {
 
   try {
     const result = await refreshSession(refreshToken);
-    await setAuthCookies(result.accessToken, result.refreshToken);
+    await setAuthCookies(result.accessToken, result.refreshToken, {
+      rememberMe: result.rememberMe,
+    });
     return ok(result.user, 'Session refreshed');
   } catch (error) {
     // Clear cookies so a stale/invalid refresh token doesn't linger client-side.

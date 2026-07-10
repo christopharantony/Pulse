@@ -15,6 +15,8 @@ const authErrorStatus: Record<AuthError['code'], number> = {
   INVALID_CREDENTIALS: 401,
   UNAUTHENTICATED: 401,
   INVALID_SESSION: 401,
+  INVALID_TOKEN: 400,
+  TOKEN_REUSE: 401,
 };
 
 export function handleRouteError(error: unknown): NextResponse {

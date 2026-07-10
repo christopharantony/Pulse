@@ -19,3 +19,16 @@ export function generateRefreshToken(): string {
 export function hashRefreshToken(token: string): string {
   return createHmac('sha256', serverEnv.JWT_REFRESH_SECRET).update(token).digest('hex');
 }
+
+/**
+ * Generic opaque-token helpers for single-use links (email verification, password reset) that
+ * follow the same pattern as refresh tokens: a high-entropy random string is emailed to the user,
+ * and only its HMAC digest is ever persisted, so a DB read alone can't forge a valid token.
+ */
+export function generateOpaqueToken(): string {
+  return randomBytes(32).toString('base64url');
+}
+
+export function hashOpaqueToken(token: string): string {
+  return createHmac('sha256', serverEnv.JWT_REFRESH_SECRET).update(token).digest('hex');
+}

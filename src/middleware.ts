@@ -7,7 +7,7 @@ import { ACCESS_TOKEN_COOKIE } from '@/lib/auth/cookie-names';
 const accessSecret = new TextEncoder().encode(serverEnv.JWT_ACCESS_SECRET);
 
 // URL path prefixes, not folder names — route groups like (dashboard) don't appear in the URL.
-const PROTECTED_PREFIXES = ['/dashboard'];
+const PROTECTED_PREFIXES = ['/dashboard', '/settings'];
 
 // This only verifies the access token's signature/expiry (Edge-safe, no DB call). It does NOT
 // attempt a refresh here — that happens client-side via an axios response interceptor calling
@@ -42,5 +42,5 @@ function redirectToLogin(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*'],
+  matcher: ['/dashboard/:path*', '/settings/:path*'],
 };
