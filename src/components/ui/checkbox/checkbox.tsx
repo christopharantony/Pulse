@@ -13,7 +13,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
     return (
       <label
         htmlFor={inputId}
-        className="group flex w-fit cursor-pointer select-none items-center gap-2.5 text-sm text-slate-300"
+        className="group flex w-fit cursor-pointer select-none items-center gap-2.5 text-sm text-muted-foreground"
       >
         <span className="relative flex size-[18px] shrink-0 items-center justify-center">
           <input
@@ -21,7 +21,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
             id={inputId}
             type="checkbox"
             className={cn(
-              'peer size-[18px] appearance-none rounded-md border border-slate-700 bg-slate-900/60 transition-colors duration-200 checked:border-cyan-400 checked:bg-cyan-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/30',
+              'peer size-[18px] appearance-none rounded-md border border-border bg-surface/60 transition-colors duration-base checked:border-accent checked:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30',
               className
             )}
             {...props}
@@ -29,7 +29,7 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           <CheckIcon
             size={13}
             isAnimated={false}
-            className="pointer-events-none absolute text-slate-950 opacity-0 peer-checked:opacity-100"
+            className="pointer-events-none absolute text-accent-foreground opacity-0 peer-checked:opacity-100"
           />
         </span>
         {label}
