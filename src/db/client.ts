@@ -1,5 +1,5 @@
 import 'server-only';
-import { MongoClient, type Db, type Collection } from 'mongodb';
+import { MongoClient, type Db, type Collection, type Document } from 'mongodb';
 import { serverEnv } from '@/lib/env.server';
 import type { User } from '@/types/user';
 import type { Session } from '@/types/session';
@@ -34,6 +34,26 @@ function getClientPromise(): Promise<MongoClient> {
 export async function getDb(): Promise<Db> {
   const client = await getClientPromise();
   return client.db(serverEnv.DATABASE_NAME);
+}
+
+/**
+ * The connected MongoClient. Needed for multi-document transactions (see db/transaction.ts),
+ * which start a client session — the per-collection getters below don't expose the client.
+ */
+export async function getClient(): Promise<MongoClient> {
+  return getClientPromise();
+}
+
+/**
+ * Generic, name-based collection accessor used by the repository layer. Domains resolve their
+ * collection through the COLLECTIONS registry rather than a bespoke getter per collection, so the
+ * 16 new domains don't each add a hand-written getter the way the auth collections did.
+ */
+export async function getCollection<TDoc extends Document>(
+  name: string
+): Promise<Collection<TDoc>> {
+  const db = await getDb();
+  return db.collection<TDoc>(name);
 }
 
 export async function getUsersCollection(): Promise<Collection<User>> {
@@ -90,4 +110,19 @@ export async function ensureIndexes(): Promise<void> {
 
   await rateLimitAttempts.createIndex({ key: 1 }, { unique: true });
   await rateLimitAttempts.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+}
+
+/**
+ * Close the pooled connection and reset the cached client promise. Intended for test teardown
+ * (and graceful shutdown) — the app itself keeps the singleton open for the process lifetime.
+ */
+export async function closeConnection(): Promise<void> {
+  const pending =
+    process.env.NODE_ENV === 'development' ? global._mongoClientPromise : clientPromise;
+  if (pending) {
+    const client = await pending;
+    await client.close();
+  }
+  clientPromise = undefined;
+  if (process.env.NODE_ENV === 'development') global._mongoClientPromise = undefined;
 }
