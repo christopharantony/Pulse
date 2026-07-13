@@ -11,10 +11,10 @@ describe('tasksRepository', () => {
   it('creates a task with sensible defaults and no timer fields', async () => {
     const { workspaceId, userId } = ctx();
     const task = await tasksRepository.create(workspaceId, userId, { title: 'Write spec' });
-    expect(task.status).toBe('todo');
+    expect(task.status).toBe('inbox');
     expect(task.priority).toBe('none');
     expect(task.tagIds).toEqual([]);
-    expect(task.checklist).toEqual([]);
+    expect(task.subtasks).toEqual([]);
     expect(task.completedAt).toBeNull();
     expect(task.projectId).toBeNull();
     // Sanity: the Task shape carries no timer/session field.
@@ -24,7 +24,7 @@ describe('tasksRepository', () => {
   it('maintains the completedAt invariant via updateStatus', async () => {
     const { workspaceId, userId } = ctx();
     const task = await tasksRepository.create(workspaceId, userId, { title: 'Do it' });
-    const done = await tasksRepository.updateStatus(task._id, 'done');
+    const done = await tasksRepository.updateStatus(task._id, 'completed');
     expect(done?.completedAt).toBeInstanceOf(Date);
     const reopened = await tasksRepository.updateStatus(task._id, 'todo');
     expect(reopened?.completedAt).toBeNull();
@@ -34,14 +34,14 @@ describe('tasksRepository', () => {
     const { workspaceId, userId } = ctx();
     const projectId = new ObjectId();
     await tasksRepository.create(workspaceId, userId, { title: 'A', projectId });
-    await tasksRepository.create(workspaceId, userId, { title: 'B', status: 'done' });
+    await tasksRepository.create(workspaceId, userId, { title: 'B', status: 'completed' });
     await tasksRepository.create(new ObjectId(), userId, { title: 'Other workspace' });
 
     const byProject = await tasksRepository.listByProject(workspaceId, projectId);
     expect(byProject.items).toHaveLength(1);
     expect(byProject.items[0].title).toBe('A');
 
-    const done = await tasksRepository.listByStatus(workspaceId, 'done');
+    const done = await tasksRepository.listByStatus(workspaceId, 'completed');
     expect(done.items.map((t) => t.title)).toEqual(['B']);
 
     const all = await tasksRepository.listByWorkspace(workspaceId);

@@ -23,6 +23,7 @@ export const COLLECTIONS = {
   projects: 'projects',
   tasks: 'tasks',
   taskComments: 'task_comments',
+  taskActivity: 'task_activity',
   habits: 'habits',
   habitLogs: 'habit_logs',
   goals: 'goals',

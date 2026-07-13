@@ -3,6 +3,7 @@
  * consumes. All ids and dates are strings here (never `ObjectId`/`Date`), because these cross the
  * HTTP boundary. Aggregators map domain documents into these shapes; the client mirrors them.
  */
+import type { TaskPriority, TaskStatus } from '@/features/tasks/types/task';
 
 export type StatKey =
   | 'todaysTasks'
@@ -56,8 +57,8 @@ export interface ProductivityData {
 export interface RecentTaskItem {
   id: string;
   title: string;
-  status: 'todo' | 'in_progress' | 'done';
-  priority: 'none' | 'low' | 'medium' | 'high' | 'urgent';
+  status: TaskStatus;
+  priority: TaskPriority;
   project: { id: string; name: string; color: string | null } | null;
   dueDate: string | null;
   completedAt: string | null;

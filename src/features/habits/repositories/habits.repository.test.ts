@@ -5,7 +5,7 @@ import { habitLogsRepository } from '@/features/habits/repositories/habit-logs.r
 import { DuplicateKeyError } from '@/db/errors';
 import { utcDate } from '@/test/helpers';
 
-const dailyRecurrence = { frequency: 'daily' as const, interval: 1 };
+const dailyRecurrence = { frequency: 'daily' as const, interval: 1, completionBehavior: 'fixed' as const };
 
 function ctx() {
   return { workspaceId: new ObjectId(), userId: new ObjectId() };

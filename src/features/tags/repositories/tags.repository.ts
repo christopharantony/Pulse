@@ -27,9 +27,30 @@ async function findByName(workspaceId: ObjectId, name: string): Promise<Tag | nu
   return base.findOne(withWorkspaceScope({ name }, workspaceId));
 }
 
+/** Rename/recolor a tag — thin alias over `updateById`, named for call-site intent. */
+async function rename(id: ObjectId, patch: { name?: string; color?: string | null }): Promise<Tag | null> {
+  return base.updateById(id, patch);
+}
+
+/** Soft-delete a tag; caller (tags service) is responsible for pulling the id off tasks.tagIds. */
+async function remove(id: ObjectId): Promise<boolean> {
+  return base.softDeleteById(id);
+}
+
+async function listByIds(workspaceId: ObjectId, ids: ObjectId[]): Promise<Tag[]> {
+  if (ids.length === 0) return [];
+  const collection = await base.collection();
+  return collection
+    .find({ workspaceId, _id: { $in: ids }, deletedAt: null })
+    .toArray() as Promise<Tag[]>;
+}
+
 export const tagsRepository = {
   ...base,
   create,
   listByWorkspace,
   findByName,
+  rename,
+  remove,
+  listByIds,
 };

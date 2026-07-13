@@ -4,6 +4,7 @@ import { tasksRepository } from '@/features/tasks/repositories/tasks.repository'
 import type { Task } from '@/features/tasks/types/task';
 import { projectsRepository } from '@/features/projects/repositories/projects.repository';
 import type { Project } from '@/features/projects/types/project';
+import { serializeTaskListItem } from '@/features/tasks/services/task-serializer';
 import type { RecentTaskItem, RecentTasksData } from '@/features/dashboard/types/dashboard';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
 import { clampLimit } from '@/lib/query/pagination';
@@ -12,7 +13,10 @@ import { clampLimit } from '@/lib/query/pagination';
  * "Recent Tasks": the most-recently-touched tasks, newest first. Recency (`updatedAt`) is a custom
  * sort, so this uses offset pagination (the shared cursor is fixed to `{createdAt,_id}`) — the sub
  * endpoint threads `offset` for "load more". An explicit projection drops the heavy
- * `description`/`checklist` fields the list never renders.
+ * `description`/`notes`/`subtasks` fields the list never renders.
+ *
+ * Serialization is delegated to the tasks feature's `serializeTaskListItem` — the dashboard is a
+ * *consumer* of the tasks feature, not the owner of task serialization.
  */
 export async function buildRecentTasks(
   ctx: WorkspaceContext,
@@ -27,7 +31,7 @@ export async function buildRecentTasks(
   const [docs, total] = await Promise.all([
     tasks
       .find(filter)
-      .project({ description: 0, checklist: 0 })
+      .project({ description: 0, notes: 0, subtasks: 0 })
       .sort({ updatedAt: -1, _id: -1 })
       .skip(offset)
       .limit(limit)
@@ -37,29 +41,25 @@ export async function buildRecentTasks(
 
   const projectMap = await loadProjects(docs.map((t) => t.projectId));
 
-  const items: RecentTaskItem[] = docs.map((task) =>
-    serializeTask(task, task.projectId ? (projectMap.get(task.projectId.toHexString()) ?? null) : null)
-  );
+  const items: RecentTaskItem[] = docs.map((task) => {
+    const dto = serializeTaskListItem(
+      task,
+      task.projectId ? (projectMap.get(task.projectId.toHexString()) ?? null) : null
+    );
+    return {
+      id: dto.id,
+      title: dto.title,
+      status: dto.status,
+      priority: dto.priority,
+      project: dto.project,
+      dueDate: dto.dueDate,
+      completedAt: dto.completedAt,
+      updatedAt: dto.updatedAt,
+    };
+  });
 
   const nextOffset = offset + docs.length < total ? offset + limit : null;
   return { items, nextOffset, total };
-}
-
-/** Map a Task document + its (optional) resolved project into the JSON-safe list item. */
-export function serializeTask(
-  task: Task,
-  project: { id: string; name: string; color: string | null } | null
-): RecentTaskItem {
-  return {
-    id: task._id.toHexString(),
-    title: task.title,
-    status: task.status,
-    priority: task.priority,
-    project,
-    dueDate: task.dueDate ? task.dueDate.toISOString() : null,
-    completedAt: task.completedAt ? task.completedAt.toISOString() : null,
-    updatedAt: task.updatedAt.toISOString(),
-  };
 }
 
 /** Batch-load the projects referenced by a page of tasks into a serialized lookup map. */

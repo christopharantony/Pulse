@@ -50,7 +50,7 @@ export async function rollupDay(input: {
       tasks.countDocuments({ ...scope, completedAt: { $gte: start, $lt: end } } as Filter<Task>),
       tasks.countDocuments({
         ...scope,
-        status: { $ne: 'done' },
+        status: { $ne: 'completed' },
         dueDate: { $ne: null, $lt: end },
       } as Filter<Task>),
       habitLogsRepository.count({

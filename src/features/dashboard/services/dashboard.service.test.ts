@@ -52,7 +52,7 @@ describe('dashboard.service.getOverview', () => {
     // Tasks: one due today (todo), one completed today, one overdue.
     await tasksRepository.create(ctx.workspaceId, userId, { title: 'Due today', dueDate: now });
     const toComplete = await tasksRepository.create(ctx.workspaceId, userId, { title: 'Finish me' });
-    await tasksRepository.updateStatus(toComplete._id, 'done');
+    await tasksRepository.updateStatus(toComplete._id, 'completed');
     await tasksRepository.create(ctx.workspaceId, userId, {
       title: 'Overdue',
       dueDate: new Date(now.getTime() - 2 * DAY),
@@ -61,7 +61,7 @@ describe('dashboard.service.getOverview', () => {
     // A daily habit, completed today.
     const habit = await habitsRepository.create(ctx.workspaceId, userId, {
       name: 'Meditate',
-      recurrence: { frequency: 'daily', interval: 1 },
+      recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
     await habitLogsRepository.upsertForDay({
       workspaceId: ctx.workspaceId,

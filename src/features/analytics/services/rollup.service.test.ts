@@ -15,7 +15,7 @@ const DAY = 24 * 60 * 60 * 1000;
 async function seedCompletedTaskAt(workspaceId: ObjectId, userId: ObjectId, at: Date) {
   const task = await tasksRepository.create(workspaceId, userId, { title: 'Done yesterday' });
   const collection = await tasksRepository.collection();
-  await collection.updateOne({ _id: task._id }, { $set: { status: 'done', completedAt: at } });
+  await collection.updateOne({ _id: task._id }, { $set: { status: 'completed', completedAt: at } });
 }
 
 describe('rollupDay', () => {
@@ -32,7 +32,7 @@ describe('rollupDay', () => {
     // A habit completed yesterday.
     const habit = await habitsRepository.create(workspaceId, userId, {
       name: 'Journal',
-      recurrence: { frequency: 'daily', interval: 1 },
+      recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
     await habitLogsRepository.upsertForDay({
       workspaceId,

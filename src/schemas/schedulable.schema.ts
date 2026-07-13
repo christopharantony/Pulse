@@ -16,6 +16,9 @@ export const recurrenceFrequencySchema = z.enum([
 ]);
 export type RecurrenceFrequency = z.infer<typeof recurrenceFrequencySchema>;
 
+export const recurrenceCompletionBehaviorSchema = z.enum(['fixed', 'rolling']);
+export type RecurrenceCompletionBehavior = z.infer<typeof recurrenceCompletionBehaviorSchema>;
+
 export const recurrenceSchema = z.object({
   frequency: recurrenceFrequencySchema,
   /** Repeat every N periods of `frequency` (e.g. interval 2 + weekly = every other week). */
@@ -24,6 +27,12 @@ export const recurrenceSchema = z.object({
   daysOfWeek: z.array(z.number().int().min(0).max(6)).optional(),
   /** When the recurrence stops; null/absent means it repeats indefinitely. */
   endDate: z.coerce.date().nullable().optional(),
+  /**
+   * `fixed` (default): the next occurrence is computed from the original due date regardless of
+   * how late completion happened — prevents drift on a missed occurrence. `rolling`: computed from
+   * the actual completion timestamp — the next occurrence intentionally shifts with real behavior.
+   */
+  completionBehavior: recurrenceCompletionBehaviorSchema.default('fixed'),
 });
 export type Recurrence = z.infer<typeof recurrenceSchema>;
 

@@ -24,7 +24,7 @@ describe('completeHabitToday', () => {
     const c = ctx();
     const habit = await habitsRepository.create(c.workspaceId, c.userId, {
       name: 'Read',
-      recurrence: { frequency: 'daily', interval: 1 },
+      recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
 
     const result = await completeHabitToday(c, habit._id);
@@ -40,7 +40,7 @@ describe('completeHabitToday', () => {
     const c = ctx();
     const habit = await habitsRepository.create(c.workspaceId, c.userId, {
       name: 'Stretch',
-      recurrence: { frequency: 'daily', interval: 1 },
+      recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
 
     await completeHabitToday(c, habit._id);
@@ -54,7 +54,7 @@ describe('completeHabitToday', () => {
     const owner = ctx();
     const habit = await habitsRepository.create(owner.workspaceId, owner.userId, {
       name: 'Private',
-      recurrence: { frequency: 'daily', interval: 1 },
+      recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
 
     const intruder = ctx(); // different workspaceId

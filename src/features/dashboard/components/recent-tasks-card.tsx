@@ -18,9 +18,13 @@ const PRIORITY_DOT: Record<RecentTaskItem['priority'], string> = {
 };
 
 const STATUS_LABEL: Record<RecentTaskItem['status'], string> = {
+  inbox: 'Inbox',
   todo: 'To do',
   in_progress: 'In progress',
-  done: 'Done',
+  waiting: 'Waiting',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  archived: 'Archived',
 };
 
 function formatDue(dueDate: string | null, done: boolean): { text: string; overdue: boolean } | null {
@@ -66,7 +70,7 @@ export function RecentTasksCard({ initial }: { initial: RecentTasksData }) {
         <>
           <ul className="flex flex-col divide-y divide-border-subtle">
             {items.map((task) => {
-              const due = formatDue(task.dueDate, task.status === 'done');
+              const due = formatDue(task.dueDate, task.status === 'completed');
               return (
                 <li key={task.id} className="flex items-center gap-3 py-2.5">
                   <span
@@ -77,7 +81,7 @@ export function RecentTasksCard({ initial }: { initial: RecentTasksData }) {
                     <span
                       className={cn(
                         'truncate text-body',
-                        task.status === 'done'
+                        task.status === 'completed'
                           ? 'text-muted-foreground line-through'
                           : 'text-foreground'
                       )}

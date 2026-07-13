@@ -42,7 +42,7 @@ export async function gatherTodayMetrics(ctx: WorkspaceContext): Promise<TodayMe
       tasks.countDocuments({ ...scope, completedAt: { $gte: start, $lt: end } } as Filter<Task>),
       tasks.countDocuments({
         ...scope,
-        status: { $ne: 'done' },
+        status: { $ne: 'completed' },
         dueDate: { $ne: null, $lt: start },
       } as Filter<Task>),
       habitLogsRepository.count({
