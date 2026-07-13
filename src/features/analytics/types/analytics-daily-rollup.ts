@@ -6,6 +6,10 @@ export interface DailyMetrics {
   tasksCompleted: number;
   habitsCompleted: number;
   focusSessions: number;
+  /** Tasks past due at the close of the day. Added for the dashboard's overdue tile/penalty. */
+  overdueTasks?: number;
+  /** The day's productivity score (0–100). Persisted so trends read O(1) from rollups. */
+  productivityScore?: number;
 }
 
 /**

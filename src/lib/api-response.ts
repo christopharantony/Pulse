@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { ZodError } from 'zod';
 import { AuthError } from '@/features/auth/services/auth.service';
+import { AppError } from '@/lib/app-error';
 
 export function ok<T>(data: T, message = 'Success', status = 200) {
   return NextResponse.json({ success: true, message, data }, { status });
@@ -25,6 +26,9 @@ export function handleRouteError(error: unknown): NextResponse {
   }
   if (error instanceof AuthError) {
     return fail(error.message, authErrorStatus[error.code]);
+  }
+  if (error instanceof AppError) {
+    return fail(error.message, error.status);
   }
   console.error('Unhandled route error:', error);
   return fail('Something went wrong. Please try again.', 500);

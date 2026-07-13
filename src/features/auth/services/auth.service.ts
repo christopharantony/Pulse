@@ -27,6 +27,7 @@ import {
   passwordChangedEmail,
 } from '@/lib/email/templates';
 import { serverEnv } from '@/lib/env.server';
+import { provisionPersonalWorkspace } from '@/features/workspace/services/workspace.service';
 import { toSafeUser, type SafeUser, type User } from '@/types/user';
 import type { RegisterInput, LoginInput } from '@/features/auth/validators/auth.schema';
 
@@ -108,6 +109,15 @@ export async function registerUser(input: RegisterInput, meta: RequestMeta): Pro
     updatedAt: now,
   };
   await users.insertOne(user);
+
+  // Auto-provision the user's personal workspace so every subsequent domain write has a tenancy
+  // boundary from the first request. Best-effort: a failure here must not abort a successful signup
+  // — `getActiveWorkspace()` lazily provisions on the first authenticated request as a backstop.
+  try {
+    await provisionPersonalWorkspace({ userId: user._id, name: user.name });
+  } catch (error) {
+    console.error('Failed to provision personal workspace at registration:', error);
+  }
 
   const rawToken = await createEmailVerificationToken(user._id);
   const link = `${serverEnv.APP_URL}/verify-email?token=${rawToken}`;
