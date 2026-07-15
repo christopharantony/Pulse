@@ -4,6 +4,8 @@ export type NotificationType =
   | 'task_due'
   | 'habit_reminder'
   | 'goal_deadline'
+  | 'milestone_due'
+  | 'goal_inactive'
   | 'mention'
   | 'system';
 

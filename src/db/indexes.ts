@@ -8,6 +8,10 @@ import { ensureActivityIndexes } from '@/features/activity/repositories/activity
 import { ensureTimeSessionIndexes } from '@/features/time-tracking/repositories/time-session.indexes';
 import { ensureHabitIndexes } from '@/features/habits/repositories/habits.indexes';
 import { ensureGoalIndexes } from '@/features/goals/repositories/goals.indexes';
+import { ensureMilestoneIndexes } from '@/features/goals/repositories/milestones.indexes';
+import { ensureGoalHabitLinkIndexes } from '@/features/goals/repositories/goal-habit-links.indexes';
+import { ensureGoalActivityIndexes } from '@/features/goals/repositories/goal-activity.indexes';
+import { ensureGoalProgressSnapshotIndexes } from '@/features/goals/repositories/goal-progress-snapshots.indexes';
 import { ensureCalendarIndexes } from '@/features/calendar/repositories/calendar.indexes';
 import { ensureNoteIndexes } from '@/features/notes/repositories/notes.indexes';
 import { ensureNotificationIndexes } from '@/features/notifications/repositories/notifications.indexes';
@@ -34,6 +38,10 @@ export async function ensureAllIndexes(): Promise<void> {
   await ensureTimeSessionIndexes(db);
   await ensureHabitIndexes(db);
   await ensureGoalIndexes(db);
+  await ensureMilestoneIndexes(db);
+  await ensureGoalHabitLinkIndexes(db);
+  await ensureGoalActivityIndexes(db);
+  await ensureGoalProgressSnapshotIndexes(db);
   await ensureCalendarIndexes(db);
   await ensureNoteIndexes(db);
   await ensureNotificationIndexes(db);

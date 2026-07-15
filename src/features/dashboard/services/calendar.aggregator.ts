@@ -6,6 +6,8 @@ import { calendarRepository } from '@/features/calendar/repositories/calendar.re
 import type { CalendarEvent } from '@/features/calendar/types/calendar-event';
 import { goalsRepository } from '@/features/goals/repositories/goals.repository';
 import type { Goal } from '@/features/goals/types/goal';
+import { milestonesRepository } from '@/features/goals/repositories/milestones.repository';
+import type { Milestone } from '@/features/goals/types/milestone';
 import { loadActiveHabits } from '@/features/dashboard/services/habits.aggregator';
 import type {
   CalendarDay,
@@ -73,14 +75,15 @@ export async function buildCalendarPreview(
   const from = addDaysToDayKey(gridStartKey, -1);
   const to = addDaysToDayKey(gridStartKey, GRID_CELLS + 1);
 
-  const [tasksColl, eventsColl, goalsColl, habits] = await Promise.all([
+  const [tasksColl, eventsColl, goalsColl, milestonesColl, habits] = await Promise.all([
     tasksRepository.collection(),
     calendarRepository.collection(),
     goalsRepository.collection(),
+    milestonesRepository.collection(),
     loadActiveHabits(ctx.workspaceId),
   ]);
 
-  const [tasks, events, goals] = await Promise.all([
+  const [tasks, events, goals, milestones] = await Promise.all([
     tasksColl
       .find({ workspaceId: ctx.workspaceId, deletedAt: null, dueDate: { $gte: from, $lt: to } } as Filter<Task>)
       .project({ dueDate: 1 })
@@ -92,6 +95,10 @@ export async function buildCalendarPreview(
     goalsColl
       .find({ workspaceId: ctx.workspaceId, deletedAt: null, targetDate: { $gte: from, $lt: to } } as Filter<Goal>)
       .project({ targetDate: 1 })
+      .toArray(),
+    milestonesColl
+      .find({ workspaceId: ctx.workspaceId, deletedAt: null, dueDate: { $gte: from, $lt: to } } as Filter<Milestone>)
+      .project({ dueDate: 1 })
       .toArray(),
   ]);
 
@@ -107,6 +114,7 @@ export async function buildCalendarPreview(
   for (const t of tasks as Pick<Task, 'dueDate'>[]) if (t.dueDate) bump(t.dueDate, 'task');
   for (const e of events as Pick<CalendarEvent, 'startsAt'>[]) bump(e.startsAt, 'event');
   for (const g of goals as Pick<Goal, 'targetDate'>[]) if (g.targetDate) bump(g.targetDate, 'milestone');
+  for (const m of milestones as Pick<Milestone, 'dueDate'>[]) if (m.dueDate) bump(m.dueDate, 'milestone');
 
   // Habit schedules: expand each active habit across the grid days (bounded loop).
   for (const habit of habits) {

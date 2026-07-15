@@ -27,6 +27,10 @@ export const COLLECTIONS = {
   habits: 'habits',
   habitLogs: 'habit_logs',
   goals: 'goals',
+  milestones: 'milestones',
+  goalHabitLinks: 'goal_habit_links',
+  goalProgressSnapshots: 'goal_progress_snapshots',
+  goalActivity: 'goal_activity',
 
   // Activity Engine (the central time-tracking domains).
   activities: 'activities',

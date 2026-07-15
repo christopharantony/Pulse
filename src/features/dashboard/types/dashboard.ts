@@ -5,6 +5,7 @@
  */
 import type { TaskPriority, TaskStatus } from '@/features/tasks/types/task';
 import type { HabitType } from '@/features/habits/types/habit';
+import type { GoalCategory, GoalPriority, GoalStatus } from '@/features/goals/types/goal';
 
 export type StatKey =
   | 'todaysTasks'
@@ -116,12 +117,45 @@ export interface CalendarPreviewData {
   days: CalendarDay[];
 }
 
+export interface GoalSummaryItem {
+  id: string;
+  title: string;
+  category: GoalCategory;
+  priority: GoalPriority;
+  status: GoalStatus;
+  progressPct: number;
+  targetDate: string | null;
+  color: string | null;
+  icon: string | null;
+  updatedAt: string;
+}
+
+export interface UpcomingMilestoneItem {
+  id: string;
+  goalId: string;
+  goalTitle: string;
+  title: string;
+  dueDate: string | null;
+}
+
+export interface GoalsSummaryData {
+  activeCount: number;
+  completedCount: number;
+  /** 0-100 average progress across active (non-completed/cancelled/archived) goals. */
+  averageProgressPct: number;
+  upcomingMilestones: UpcomingMilestoneItem[];
+  goalDeadlines: GoalSummaryItem[];
+  recentlyUpdated: GoalSummaryItem[];
+  atRisk: GoalSummaryItem[];
+}
+
 export interface DashboardOverview {
   greeting: GreetingData;
   statistics: StatisticsData;
   productivity: ProductivityData;
   recentTasks: RecentTasksData;
   habits: HabitSummaryData;
+  goals: GoalsSummaryData;
   calendar: CalendarPreviewData;
   generatedAt: string;
 }

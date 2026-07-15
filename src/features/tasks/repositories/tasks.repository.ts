@@ -32,6 +32,7 @@ const ORDER_EPSILON = 0.001;
 /** Domain-typed create payload — all ids are already ObjectIds (converted at the caller boundary). */
 export interface CreateTaskData {
   projectId?: ObjectId | null;
+  goalId?: ObjectId | null;
   title: string;
   description?: string | null;
   notes?: string | null;
@@ -60,6 +61,7 @@ async function create(
     workspaceId,
     createdBy,
     projectId: input.projectId ?? null,
+    goalId: input.goalId ?? null,
     title: input.title,
     description: input.description ?? null,
     notes: input.notes ?? null,
@@ -95,6 +97,33 @@ async function listByProject(
   opts?: FindManyOptions
 ): Promise<PaginatedResult<Task>> {
   return base.findMany(withWorkspaceScope({ projectId }, workspaceId), opts);
+}
+
+async function listByGoal(
+  workspaceId: ObjectId,
+  goalId: ObjectId,
+  opts?: FindManyOptions
+): Promise<PaginatedResult<Task>> {
+  return base.findMany(withWorkspaceScope({ goalId }, workspaceId), opts);
+}
+
+/** Completed/overdue/remaining/total counts for a goal's linked tasks — computed on read, never stored. */
+async function countByGoal(
+  workspaceId: ObjectId,
+  goalId: ObjectId
+): Promise<{ completed: number; overdue: number; remaining: number; total: number }> {
+  const collection = await base.collection();
+  const scope = { workspaceId, goalId, deletedAt: null } as Filter<Task>;
+  const [completed, overdue, total] = await Promise.all([
+    collection.countDocuments({ ...scope, status: 'completed' } as Filter<Task>),
+    collection.countDocuments({
+      ...scope,
+      status: { $nin: ['completed', 'cancelled', 'archived'] },
+      dueDate: { $ne: null, $lt: new Date() },
+    } as Filter<Task>),
+    collection.countDocuments(scope),
+  ]);
+  return { completed, overdue, remaining: total - completed, total };
 }
 
 async function listByStatus(
@@ -153,6 +182,7 @@ export interface TaskListFilter {
   priority?: TaskPriority[];
   tagIds?: ObjectId[];
   projectId?: ObjectId;
+  goalId?: ObjectId;
   q?: string;
   dueFrom?: Date;
   dueTo?: Date;
@@ -184,6 +214,7 @@ async function listFiltered(
   if (filter.priority?.length) clauses.push({ priority: { $in: filter.priority } } as Filter<Task>);
   if (filter.tagIds?.length) clauses.push({ tagIds: { $in: filter.tagIds } } as Filter<Task>);
   if (filter.projectId) clauses.push(buildFilter<Task>({ projectId: filter.projectId }, ['projectId']));
+  if (filter.goalId) clauses.push(buildFilter<Task>({ goalId: filter.goalId }, ['goalId']));
   if (filter.hasDueDate !== undefined) {
     clauses.push({ dueDate: filter.hasDueDate ? { $ne: null } : null } as Filter<Task>);
   }
@@ -398,6 +429,8 @@ export const tasksRepository = {
   create,
   listByWorkspace,
   listByProject,
+  listByGoal,
+  countByGoal,
   listByStatus,
   search,
   updateStatus,

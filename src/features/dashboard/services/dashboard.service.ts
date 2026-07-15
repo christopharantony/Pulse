@@ -10,6 +10,7 @@ import { buildHabitSummary } from '@/features/dashboard/services/habits.aggregat
 import { buildRecentTasks } from '@/features/dashboard/services/recent-tasks.aggregator';
 import { buildGreeting } from '@/features/dashboard/services/greeting.aggregator';
 import { buildCalendarPreview } from '@/features/dashboard/services/calendar.aggregator';
+import { buildGoalsSummary } from '@/features/dashboard/services/goals.aggregator';
 
 /** Number of recent tasks embedded in the first-paint overview (more via the sub-endpoint). */
 const OVERVIEW_RECENT_TASKS = 5;
@@ -31,12 +32,13 @@ export async function getOverview(
   opts?: { month?: string }
 ): Promise<DashboardOverview> {
   const users = await getUsersCollection();
-  const [userDoc, metrics, habits, recentTasks, calendar] = await Promise.all([
+  const [userDoc, metrics, habits, recentTasks, calendar, goals] = await Promise.all([
     users.findOne({ _id: ctx.userId }, { projection: { name: 1 } }),
     gatherTodayMetrics(ctx),
     buildHabitSummary(ctx),
     buildRecentTasks(ctx, { limit: OVERVIEW_RECENT_TASKS }),
     buildCalendarPreview(ctx, opts?.month),
+    buildGoalsSummary(ctx),
   ]);
 
   if (!userDoc) {
@@ -53,6 +55,7 @@ export async function getOverview(
     productivity,
     recentTasks,
     habits,
+    goals,
     calendar,
     generatedAt: new Date().toISOString(),
   };

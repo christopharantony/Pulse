@@ -9,6 +9,8 @@ export async function ensureTaskIndexes(db: Db): Promise<void> {
   await tasks.createIndex({ workspaceId: 1, status: 1, dueDate: 1 });
   // A project's task list.
   await tasks.createIndex({ workspaceId: 1, projectId: 1 });
+  // A goal's linked task list + completed/overdue/remaining counts.
+  await tasks.createIndex({ workspaceId: 1, goalId: 1 });
   // In-app search (title/description/notes).
   await tasks.createIndex({ title: 'text', description: 'text', notes: 'text' });
   // Trash view / purge job.

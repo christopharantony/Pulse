@@ -37,6 +37,8 @@ export interface Task {
   _id: ObjectId;
   workspaceId: ObjectId;
   projectId: ObjectId | null;
+  /** Optional link to the Goal this task contributes to; a task belongs to at most one goal. */
+  goalId: ObjectId | null;
   title: string;
   description: string | null;
   /** Freeform notes, distinct from `description` (e.g. context vs. scratch space). */

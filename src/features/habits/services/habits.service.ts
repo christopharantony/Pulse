@@ -2,6 +2,7 @@ import 'server-only';
 import { type ObjectId } from 'mongodb';
 import { habitsRepository } from '@/features/habits/repositories/habits.repository';
 import { habitLogsRepository } from '@/features/habits/repositories/habit-logs.repository';
+import { goalHabitLinksRepository } from '@/features/goals/repositories/goal-habit-links.repository';
 import type { Habit } from '@/features/habits/types/habit';
 import type { HabitLog } from '@/features/habits/types/habit-log';
 import type {
@@ -61,8 +62,8 @@ function notFound(): never {
   throw new HabitError('Habit not found', 'HABIT_NOT_FOUND', 404);
 }
 
-/** Load a habit and verify it belongs to the caller's workspace, or throw 404. */
-async function getOwnedHabit(
+/** Load a habit and verify it belongs to the caller's workspace, or throw 404. Reused by goal-habits.service.ts. */
+export async function getOwnedHabit(
   ctx: WorkspaceContext,
   id: ObjectId,
   opts?: { includeDeleted?: boolean }
@@ -213,6 +214,8 @@ export async function permanentlyDeleteHabit(ctx: WorkspaceContext, id: ObjectId
   if (!habit.deletedAt) {
     throw new HabitError('Habit must be trashed before it can be permanently deleted', 'HABIT_NOT_IN_TRASH', 409);
   }
+  // Clean up any goal-habit links referencing this habit — see goal-habits.service.ts.
+  await goalHabitLinksRepository.deleteAllForHabit(id);
   const ok = await habitsRepository.hardDeleteById(id);
   if (!ok) notFound();
 }

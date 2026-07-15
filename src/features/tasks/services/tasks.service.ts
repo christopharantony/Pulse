@@ -22,6 +22,8 @@ import {
 } from '@/features/tasks/services/task-serializer';
 import type { ProjectRefDto, TagRefDto, TaskDetailDto, TaskListItemDto } from '@/features/tasks/types/task-dto';
 import { computeNextDueDate, isExpired } from '@/features/tasks/services/recurrence';
+import { recordGoalActivity } from '@/features/goals/services/goal-activity.service';
+import { recomputeGoalProgress } from '@/features/goals/services/goal-progress.service';
 
 export class TaskError extends AppError {
   constructor(
@@ -87,6 +89,7 @@ export async function createTask(ctx: WorkspaceContext, input: CreateTaskInput):
     description: input.description ?? null,
     notes: input.notes ?? null,
     projectId: input.projectId ? new ObjectId(input.projectId) : null,
+    goalId: input.goalId ? new ObjectId(input.goalId) : null,
     status,
     priority: input.priority,
     color: input.color ?? null,
@@ -148,6 +151,9 @@ async function applyPatch(id: ObjectId, input: UpdateTaskInput): Promise<Task> {
   if (input.notes !== undefined) patch.notes = input.notes ?? null;
   if (input.projectId !== undefined) {
     patch.projectId = input.projectId ? new ObjectId(input.projectId) : null;
+  }
+  if (input.goalId !== undefined) {
+    patch.goalId = input.goalId ? new ObjectId(input.goalId) : null;
   }
   if (input.status !== undefined) patch.status = input.status;
   if (input.priority !== undefined) patch.priority = input.priority;
@@ -218,6 +224,10 @@ export async function completeTask(ctx: WorkspaceContext, id: ObjectId): Promise
     fromValue: task.status,
     toValue: 'completed',
   });
+  if (task.goalId) {
+    await recordGoalActivity(ctx, task.goalId, 'task_completed', null, task.title);
+    await recomputeGoalProgress(ctx, task.goalId);
+  }
   return updated;
 }
 
@@ -268,6 +278,7 @@ export async function duplicateTask(
     description: original.description,
     notes: original.notes,
     projectId: original.projectId,
+    goalId: original.goalId,
     status: 'todo',
     priority: original.priority,
     color: original.color,
@@ -500,6 +511,7 @@ export async function listTasks(ctx: WorkspaceContext, query: TaskListQueryInput
       priority: query.priority,
       tagIds: toObjectIds(query.tagIds),
       projectId: query.projectId ? new ObjectId(query.projectId) : undefined,
+      goalId: query.goalId ? new ObjectId(query.goalId) : undefined,
       q: query.q,
       dueFrom: query.dueFrom,
       dueTo: query.dueTo,

@@ -50,6 +50,7 @@ export const createTaskSchema = z
     description: z.string().max(10_000).nullable().optional(),
     notes: z.string().max(10_000).nullable().optional(),
     projectId: objectIdStringSchema.nullable().optional(),
+    goalId: objectIdStringSchema.nullable().optional(),
     status: taskStatusSchema.default('inbox'),
     priority: taskPrioritySchema.default('none'),
     color: z
@@ -100,6 +101,7 @@ export const taskListQuerySchema = offsetPaginationSchema.merge(sortSchema).exte
   priority: z.array(taskPrioritySchema).optional(),
   tagIds: z.array(objectIdStringSchema).optional(),
   projectId: objectIdStringSchema.optional(),
+  goalId: objectIdStringSchema.optional(),
   q: z.string().max(200).optional(),
   dueFrom: z.coerce.date().optional(),
   dueTo: z.coerce.date().optional(),
