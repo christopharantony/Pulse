@@ -32,6 +32,7 @@ describe('rollupDay', () => {
     // A habit completed yesterday.
     const habit = await habitsRepository.create(workspaceId, userId, {
       name: 'Journal',
+      type: 'boolean',
       recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
     await habitLogsRepository.upsertForDay({

@@ -13,7 +13,7 @@ import type {
   CalendarPreviewData,
 } from '@/features/dashboard/types/dashboard';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
-import { isScheduledOn } from '@/lib/time/recurrence';
+import { isHabitScheduledOn, habitAnchor } from '@/features/habits/services/habit-schedule';
 import { addDaysToDayKey, zonedDayKey, zonedDayParts } from '@/lib/time/day';
 
 const INDICATOR_COLOR = {
@@ -110,9 +110,9 @@ export async function buildCalendarPreview(
 
   // Habit schedules: expand each active habit across the grid days (bounded loop).
   for (const habit of habits) {
-    const anchor = zonedDayParts(habit.createdAt, ctx.timezone);
+    const anchor = habitAnchor(habit, ctx.timezone);
     for (const [dayTime] of cellByDay) {
-      if (isScheduledOn(habit.recurrence, new Date(dayTime), anchor)) {
+      if (isHabitScheduledOn(habit, new Date(dayTime), anchor)) {
         const entry = counts.get(dayTime) ?? { task: 0, habit: 0, event: 0, milestone: 0 };
         entry.habit += 1;
         counts.set(dayTime, entry);

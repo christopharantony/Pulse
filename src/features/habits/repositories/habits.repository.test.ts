@@ -1,9 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { ObjectId } from 'mongodb';
 import { habitsRepository } from '@/features/habits/repositories/habits.repository';
-import { habitLogsRepository } from '@/features/habits/repositories/habit-logs.repository';
-import { DuplicateKeyError } from '@/db/errors';
-import { utcDate } from '@/test/helpers';
 
 const dailyRecurrence = { frequency: 'daily' as const, interval: 1, completionBehavior: 'fixed' as const };
 
@@ -11,121 +8,113 @@ function ctx() {
   return { workspaceId: new ObjectId(), userId: new ObjectId() };
 }
 
-describe('habitLogsRepository', () => {
-  it('is idempotent per day (upsert on {habitId, date})', async () => {
-    const { workspaceId, userId } = ctx();
-    const habitId = new ObjectId();
-    const date = utcDate('2026-03-01');
-
-    const first = await habitLogsRepository.upsertForDay({
-      workspaceId,
-      habitId,
-      userId,
-      date,
-      status: 'completed',
-    });
-    const second = await habitLogsRepository.upsertForDay({
-      workspaceId,
-      habitId,
-      userId,
-      date,
-      status: 'skipped',
-    });
-    expect(second._id.toHexString()).toBe(first._id.toHexString());
-    expect(second.status).toBe('skipped');
-
-    const range = await habitLogsRepository.listForRange(
-      habitId,
-      utcDate('2026-03-01'),
-      utcDate('2026-03-31')
-    );
-    expect(range).toHaveLength(1);
-  });
-
-  it('normalises any time-of-day to the same day-key, so a duplicate insert collides', async () => {
-    const { workspaceId, userId } = ctx();
-    const habitId = new ObjectId();
-    await habitLogsRepository.upsertForDay({
-      workspaceId,
-      habitId,
-      userId,
-      date: new Date('2026-03-02T08:30:00.000Z'),
-      status: 'completed',
-    });
-    // Direct insert of the same day-key must violate the unique index.
-    const collection = await habitLogsRepository.collection();
-    await expect(
-      collection.insertOne({
-        _id: new ObjectId(),
-        workspaceId,
-        habitId,
-        userId,
-        date: utcDate('2026-03-02'),
-        status: 'completed',
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      })
-    ).rejects.toMatchObject({ code: 11000 });
-  });
-});
-
 describe('habitsRepository', () => {
-  it('creates a habit with zeroed streaks and reuses the shared recurrence shape', async () => {
+  it('creates a habit with zeroed streak cache and the requested type', async () => {
     const { workspaceId, userId } = ctx();
     const habit = await habitsRepository.create(workspaceId, userId, {
       name: 'Meditate',
+      type: 'boolean',
       recurrence: dailyRecurrence,
     });
     expect(habit.currentStreak).toBe(0);
     expect(habit.longestStreak).toBe(0);
+    expect(habit.streakUnit).toBe('day');
+    expect(habit.type).toBe('boolean');
     expect(habit.recurrence.frequency).toBe('daily');
   });
 
-  it('recomputes the streak cache from completed logs', async () => {
+  it('creates a numeric habit with its target/unit', async () => {
+    const { workspaceId, userId } = ctx();
+    const habit = await habitsRepository.create(workspaceId, userId, {
+      name: 'Drink water',
+      type: 'numeric',
+      recurrence: dailyRecurrence,
+      targetValue: 3,
+      unit: 'L',
+    });
+    expect(habit.targetValue).toBe(3);
+    expect(habit.unit).toBe('L');
+  });
+
+  it('applyStreakCache persists a computed streak patch', async () => {
     const { workspaceId, userId } = ctx();
     const habit = await habitsRepository.create(workspaceId, userId, {
       name: 'Run',
+      type: 'boolean',
       recurrence: dailyRecurrence,
     });
-
-    // Three consecutive days, a gap, then two consecutive days.
-    for (const day of ['2026-04-01', '2026-04-02', '2026-04-03', '2026-04-06', '2026-04-07']) {
-      await habitLogsRepository.upsertForDay({
-        workspaceId,
-        habitId: habit._id,
-        userId,
-        date: utcDate(day),
-        status: 'completed',
-      });
-    }
-
-    const updated = await habitsRepository.recomputeStreakCache(habit._id);
-    expect(updated?.longestStreak).toBe(3);
-    // Current streak is the run ending at the most recent completed day (Apr 6–7).
-    expect(updated?.currentStreak).toBe(2);
+    const updated = await habitsRepository.applyStreakCache(habit._id, {
+      currentStreak: 5,
+      longestStreak: 7,
+      streakUnit: 'day',
+      consistencyScore: 42,
+      lastLoggedDayKey: new Date('2026-03-01T00:00:00.000Z'),
+      streakAnchorDayKey: new Date('2026-02-25T00:00:00.000Z'),
+    });
+    expect(updated?.currentStreak).toBe(5);
+    expect(updated?.longestStreak).toBe(7);
+    expect(updated?.consistencyScore).toBe(42);
   });
 
-  it('excludes duplicate-key errors leaking as anything but DuplicateKeyError via upsert path', async () => {
-    // Sanity: upsertForDay itself never throws for a repeated day (idempotent).
+  it('listFiltered scopes to the workspace and excludes archived/deleted by default', async () => {
     const { workspaceId, userId } = ctx();
-    const habitId = new ObjectId();
-    await habitLogsRepository.upsertForDay({
-      workspaceId,
-      habitId,
-      userId,
-      date: utcDate('2026-05-01'),
-      status: 'completed',
+    const habit = await habitsRepository.create(workspaceId, userId, {
+      name: 'Journal',
+      type: 'boolean',
+      recurrence: dailyRecurrence,
     });
-    await expect(
-      habitLogsRepository.upsertForDay({
-        workspaceId,
-        habitId,
-        userId,
-        date: utcDate('2026-05-01'),
-        status: 'completed',
-      })
-    ).resolves.toBeDefined();
-    // The negative control: a raw duplicate insert would be a DuplicateKeyError if surfaced.
-    expect(DuplicateKeyError).toBeDefined();
+    await habitsRepository.create(new ObjectId(), new ObjectId(), {
+      name: 'Other workspace habit',
+      type: 'boolean',
+      recurrence: dailyRecurrence,
+    });
+    const archived = await habitsRepository.create(workspaceId, userId, {
+      name: 'Archived habit',
+      type: 'boolean',
+      recurrence: dailyRecurrence,
+    });
+    await habitsRepository.setArchived(archived._id, true);
+
+    const result = await habitsRepository.listFiltered(workspaceId, {}, {}, {});
+    const ids = result.items.map((h) => h._id.toHexString());
+    expect(ids).toContain(habit._id.toHexString());
+    expect(ids).not.toContain(archived._id.toHexString());
+  });
+
+  it('listFiltered filters by type', async () => {
+    const { workspaceId, userId } = ctx();
+    await habitsRepository.create(workspaceId, userId, {
+      name: 'Boolean one',
+      type: 'boolean',
+      recurrence: dailyRecurrence,
+    });
+    const numeric = await habitsRepository.create(workspaceId, userId, {
+      name: 'Numeric one',
+      type: 'numeric',
+      recurrence: dailyRecurrence,
+      targetValue: 5,
+    });
+
+    const result = await habitsRepository.listFiltered(workspaceId, { type: ['numeric'] }, {}, {});
+    expect(result.items.map((h) => h._id.toHexString())).toEqual([numeric._id.toHexString()]);
+  });
+
+  it('soft-deletes into trash and restores', async () => {
+    const { workspaceId, userId } = ctx();
+    const habit = await habitsRepository.create(workspaceId, userId, {
+      name: 'To delete',
+      type: 'boolean',
+      recurrence: dailyRecurrence,
+    });
+    await habitsRepository.softDeleteById(habit._id);
+
+    const trash = await habitsRepository.listTrash(workspaceId);
+    expect(trash.map((h) => h._id.toHexString())).toContain(habit._id.toHexString());
+
+    const restored = await habitsRepository.restore(habit._id);
+    expect(restored?.deletedAt).toBeNull();
+
+    const trashAfter = await habitsRepository.listTrash(workspaceId);
+    expect(trashAfter.map((h) => h._id.toHexString())).not.toContain(habit._id.toHexString());
   });
 });

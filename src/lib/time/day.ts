@@ -113,3 +113,16 @@ export function toISODate(parts: DayParts): string {
   const dd = String(parts.day).padStart(2, '0');
   return `${parts.year}-${mm}-${dd}`;
 }
+
+/**
+ * The `[start, end)` day-key range for a calendar month, in day-key space (not a real-instant tz
+ * range like {@link zonedDayRange}). Day-bucketed collections (`habit_logs`) store UTC-midnight
+ * day-keys, not instants, so a "this month" range query over them is pure calendar arithmetic once
+ * you already have day-keys — no timezone conversion needed. `month` is 1-based (1 = January).
+ */
+export function dayKeyMonthRange(year: number, month: number): { start: Date; end: Date } {
+  return {
+    start: new Date(Date.UTC(year, month - 1, 1)),
+    end: new Date(Date.UTC(year, month, 1)),
+  };
+}

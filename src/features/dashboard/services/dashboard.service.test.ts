@@ -61,16 +61,25 @@ describe('dashboard.service.getOverview', () => {
     // A daily habit, completed today.
     const habit = await habitsRepository.create(ctx.workspaceId, userId, {
       name: 'Meditate',
+      type: 'boolean',
       recurrence: { frequency: 'daily', interval: 1, completionBehavior: 'fixed' },
     });
+    const habitTodayKey = zonedDayKey(now, 'UTC');
     await habitLogsRepository.upsertForDay({
       workspaceId: ctx.workspaceId,
       habitId: habit._id,
       userId,
-      date: zonedDayKey(now, 'UTC'),
+      date: habitTodayKey,
       status: 'completed',
     });
-    await habitsRepository.recomputeStreakCache(habit._id);
+    await habitsRepository.applyStreakCache(habit._id, {
+      currentStreak: 1,
+      longestStreak: 1,
+      streakUnit: 'day',
+      consistencyScore: 100,
+      lastLoggedDayKey: habitTodayKey,
+      streakAnchorDayKey: habitTodayKey,
+    });
 
     // A 30-minute focus session today.
     const session = await timeSessionRepository.startSession({

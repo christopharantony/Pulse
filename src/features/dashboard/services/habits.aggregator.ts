@@ -6,8 +6,8 @@ import type { Habit } from '@/features/habits/types/habit';
 import type { HabitLog } from '@/features/habits/types/habit-log';
 import type { HabitSummaryData, HabitTodayItem } from '@/features/dashboard/types/dashboard';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
-import { addDaysToDayKey, zonedDayKey, zonedDayParts, type DayParts } from '@/lib/time/day';
-import { isScheduledOn } from '@/lib/time/recurrence';
+import { addDaysToDayKey, zonedDayKey } from '@/lib/time/day';
+import { isDaySatisfied, isHabitScheduledOn, habitAnchor, progressPct } from '@/features/habits/services/habit-schedule';
 
 /**
  * All live (non-deleted, non-archived) habits in a workspace. Exported so the statistics/metrics
@@ -20,19 +20,22 @@ export async function loadActiveHabits(workspaceId: ObjectId): Promise<Habit[]> 
     .toArray() as Promise<Habit[]>;
 }
 
-/** The habit's creation day as calendar parts — the anchor for monthly/yearly schedules. */
-function habitAnchor(habit: Habit, timezone: string): DayParts {
-  return zonedDayParts(habit.createdAt, timezone);
-}
-
 function frequencyLabel(habit: Habit): string {
   const { recurrence, targetPerPeriod } = habit;
+  if (habit.specificDates?.length) return 'Specific dates';
   if (targetPerPeriod && recurrence.frequency === 'weekly') return `${targetPerPeriod}× / week`;
+  const interval = recurrence.interval ?? 1;
   switch (recurrence.frequency) {
     case 'daily':
-      return 'Daily';
+      return interval > 1 ? `Every ${interval} days` : 'Daily';
     case 'weekly':
-      return 'Weekly';
+      if (recurrence.daysOfWeek?.length === 5 && [1, 2, 3, 4, 5].every((d) => recurrence.daysOfWeek!.includes(d))) {
+        return 'Weekdays';
+      }
+      if (recurrence.daysOfWeek?.length === 2 && [0, 6].every((d) => recurrence.daysOfWeek!.includes(d))) {
+        return 'Weekends';
+      }
+      return interval > 1 ? `Every ${interval} weeks` : 'Weekly';
     case 'monthly':
       return 'Monthly';
     case 'yearly':
@@ -51,7 +54,10 @@ function weekStartKey(todayKey: Date, weekStartsOn: number): Date {
 /**
  * "Today's Habits": the habits scheduled today, each with its streak, this-period completion %, and
  * whether it's already done today. A single week-range read of `habit_logs` backs the completion
- * math (no per-habit query), keeping the section O(1) in queries regardless of habit count.
+ * math (no per-habit query), keeping the section O(1) in queries regardless of habit count. Every
+ * habit type's "satisfied" definition is the log's stored `status` — the repository layer already
+ * computes `status: 'completed'` at write time using the same `isDaySatisfied` rule (value >=
+ * target, or all checklist items checked), so this aggregator never needs to special-case type.
  */
 export async function buildHabitSummary(ctx: WorkspaceContext): Promise<HabitSummaryData> {
   const now = new Date();
@@ -59,30 +65,32 @@ export async function buildHabitSummary(ctx: WorkspaceContext): Promise<HabitSum
   const fromKey = weekStartKey(todayKey, ctx.weekStartsOn);
 
   const habits = await loadActiveHabits(ctx.workspaceId);
-  const scheduled = habits.filter((h) =>
-    isScheduledOn(h.recurrence, todayKey, habitAnchor(h, ctx.timezone))
-  );
+  const scheduled = habits.filter((h) => isHabitScheduledOn(h, todayKey, habitAnchor(h, ctx.timezone)));
 
   const logsCollection = await habitLogsRepository.collection();
   const logs = (await logsCollection
     .find({
       workspaceId: ctx.workspaceId,
-      status: 'completed',
       date: { $gte: fromKey, $lte: todayKey },
     } as Filter<HabitLog>)
     .toArray()) as HabitLog[];
 
-  // Map habitId → set of completed day-key timestamps this week.
-  const completedByHabit = new Map<string, Set<number>>();
+  // Map habitId → set of satisfied day-key timestamps this week, and habitId → today's own log.
+  const satisfiedByHabit = new Map<string, Set<number>>();
+  const todayLogByHabit = new Map<string, HabitLog>();
   for (const log of logs) {
     const id = log.habitId.toHexString();
-    const set = completedByHabit.get(id) ?? new Set<number>();
-    set.add(log.date.getTime());
-    completedByHabit.set(id, set);
+    if (log.date.getTime() === todayKey.getTime()) todayLogByHabit.set(id, log);
+    if (log.status === 'completed') {
+      const set = satisfiedByHabit.get(id) ?? new Set<number>();
+      set.add(log.date.getTime());
+      satisfiedByHabit.set(id, set);
+    }
   }
 
   const items: HabitTodayItem[] = scheduled.map((habit) => {
-    const done = completedByHabit.get(habit._id.toHexString()) ?? new Set<number>();
+    const id = habit._id.toHexString();
+    const done = satisfiedByHabit.get(id) ?? new Set<number>();
     const completedToday = done.has(todayKey.getTime());
     const completedThisPeriod = done.size;
     const completionPct = habit.targetPerPeriod
@@ -90,16 +98,21 @@ export async function buildHabitSummary(ctx: WorkspaceContext): Promise<HabitSum
       : completedToday
         ? 100
         : 0;
+    const todayLog = todayLogByHabit.get(id) ?? null;
 
     return {
-      id: habit._id.toHexString(),
+      id,
       name: habit.name,
       color: habit.color,
+      icon: habit.icon,
+      type: habit.type,
+      unit: habit.unit,
       frequencyLabel: frequencyLabel(habit),
       currentStreak: habit.currentStreak,
       completionPct,
+      progressToday: isDaySatisfied(habit, todayLog) ? 100 : progressPct(habit, todayLog),
       completedToday,
-      nextReminder: null,
+      nextReminder: habit.reminders.find((r) => r.enabled)?.timeOfDay ?? null,
     };
   });
 

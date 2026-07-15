@@ -7,8 +7,8 @@ import type { HabitLog } from '@/features/habits/types/habit-log';
 import { timeSessionRepository } from '@/features/time-tracking/repositories/time-session.repository';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
 import { loadActiveHabits } from '@/features/dashboard/services/habits.aggregator';
-import { isScheduledOn } from '@/lib/time/recurrence';
-import { zonedDayKey, zonedDayParts, zonedDayRange } from '@/lib/time/day';
+import { isHabitScheduledOn, habitAnchor } from '@/features/habits/services/habit-schedule';
+import { zonedDayKey, zonedDayRange } from '@/lib/time/day';
 
 /**
  * The live "today" numbers, gathered once and shared by the statistics tiles and the productivity
@@ -55,7 +55,7 @@ export async function gatherTodayMetrics(ctx: WorkspaceContext): Promise<TodayMe
     ]);
 
   const habitsScheduledToday = habits.filter((h) =>
-    isScheduledOn(h.recurrence, todayKey, zonedDayParts(h.createdAt, ctx.timezone))
+    isHabitScheduledOn(h, todayKey, habitAnchor(h, ctx.timezone))
   ).length;
   const topCurrentStreak = habits.reduce((max, h) => Math.max(max, h.currentStreak), 0);
 

@@ -4,6 +4,7 @@
  * HTTP boundary. Aggregators map domain documents into these shapes; the client mirrors them.
  */
 import type { TaskPriority, TaskStatus } from '@/features/tasks/types/task';
+import type { HabitType } from '@/features/habits/types/habit';
 
 export type StatKey =
   | 'todaysTasks'
@@ -76,9 +77,14 @@ export interface HabitTodayItem {
   id: string;
   name: string;
   color: string | null;
+  icon: string | null;
+  type: HabitType;
+  unit: string | null;
   frequencyLabel: string;
   currentStreak: number;
   completionPct: number;
+  /** 0-100 progress toward TODAY's target specifically (vs `completionPct`, a period measure). */
+  progressToday: number;
   completedToday: boolean;
   nextReminder: string | null;
 }

@@ -5,11 +5,7 @@ import type {
   RecentTaskItem,
   RecentTasksData,
 } from '@/features/dashboard/types/dashboard';
-
-export interface HabitCompletionResult {
-  completedToday: boolean;
-  currentStreak: number;
-}
+import type { HabitDto } from '@/features/habits/types/habit-dto';
 
 export interface QuickCreateTaskInput {
   title: string;
@@ -32,10 +28,8 @@ export async function fetchRecentTasks(offset: number, limit?: number): Promise<
   return data.data;
 }
 
-export async function completeHabitRequest(habitId: string): Promise<HabitCompletionResult> {
-  const { data } = await api.post<ApiEnvelope<HabitCompletionResult>>(
-    `/habits/${habitId}/complete`
-  );
+export async function completeHabitRequest(habitId: string): Promise<HabitDto> {
+  const { data } = await api.post<ApiEnvelope<HabitDto>>(`/habits/${habitId}/complete`);
   return data.data;
 }
 
