@@ -12,6 +12,7 @@ import { GoalPriorityBadge } from '@/features/goals/components/goal-priority-bad
 import { GoalStatusBadge } from '@/features/goals/components/goal-status-badge';
 import { GoalProgressRing } from '@/features/goals/components/goal-progress-ring';
 import { GoalManualProgress } from '@/features/goals/components/goal-manual-progress';
+import { GoalTimerWidget } from '@/features/goals/components/goal-timer-widget';
 import { GoalTimeline } from '@/features/goals/components/goal-timeline';
 import { GoalEditDialog } from '@/features/goals/components/goal-edit-dialog';
 import { MilestoneList } from '@/features/goals/components/milestone-list';
@@ -72,6 +73,8 @@ export function GoalDetailPanel({ goalId, onBack }: GoalDetailPanelProps) {
       </div>
 
       {(goal.progressMethod === 'manual' || goal.progressMethod === 'habit') && <GoalManualProgress goal={goal} />}
+
+      <GoalTimerWidget goalId={goal.id} />
 
       <GoalTimeline goal={goal} />
 

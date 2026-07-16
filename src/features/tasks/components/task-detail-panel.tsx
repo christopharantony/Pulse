@@ -13,6 +13,7 @@ import { SubtaskTree } from '@/features/tasks/components/subtask-tree';
 import { CommentThread } from '@/features/tasks/components/comment-thread';
 import { TaskActionsMenu } from '@/features/tasks/components/task-actions-menu';
 import { RecurrencePicker } from '@/features/tasks/components/recurrence-picker';
+import { TaskTimerWidget } from '@/features/tasks/components/task-timer-widget';
 import { useTask } from '@/features/tasks/hooks/use-task';
 import { useUpdateTask } from '@/features/tasks/hooks/use-update-task';
 import { useCompleteTask } from '@/features/tasks/hooks/use-complete-task';
@@ -159,6 +160,8 @@ export function TaskDetailPanel({ taskId, onBack }: TaskDetailPanelProps) {
           />
         </div>
       </div>
+
+      <TaskTimerWidget taskId={task.id} />
 
       <div className="flex flex-col gap-1.5">
         <label className="text-label text-muted-foreground">Tags</label>

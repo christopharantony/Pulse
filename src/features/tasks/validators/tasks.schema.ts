@@ -112,3 +112,13 @@ export const taskListQuerySchema = offsetPaginationSchema.merge(sortSchema).exte
   includeDeleted: z.coerce.boolean().optional(),
 });
 export type TaskListQueryInput = z.infer<typeof taskListQuerySchema>;
+
+export const startTaskTimerSchema = z.object({
+  note: z.string().max(1000).nullable().optional(),
+});
+export type StartTaskTimerInput = z.infer<typeof startTaskTimerSchema>;
+
+export const stopTaskTimerSchema = z.object({
+  sessionId: objectIdStringSchema,
+});
+export type StopTaskTimerInput = z.infer<typeof stopTaskTimerSchema>;

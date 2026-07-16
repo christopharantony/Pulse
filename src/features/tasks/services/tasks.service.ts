@@ -24,16 +24,20 @@ import type { ProjectRefDto, TagRefDto, TaskDetailDto, TaskListItemDto } from '@
 import { computeNextDueDate, isExpired } from '@/features/tasks/services/recurrence';
 import { recordGoalActivity } from '@/features/goals/services/goal-activity.service';
 import { recomputeGoalProgress } from '@/features/goals/services/goal-progress.service';
+import { startTimerForSource, stopTimer, type StartTimerResult, type StopTimerResult } from '@/features/time-tracking/services/time-tracking.service';
 
 export class TaskError extends AppError {
   constructor(
     message: string,
-    code: 'TASK_NOT_FOUND' | 'TASK_NOT_IN_TRASH' | 'SUBTASK_LIMIT_EXCEEDED' | 'SUBTASK_NOT_FOUND',
+    code: 'TASK_NOT_FOUND' | 'TASK_NOT_IN_TRASH' | 'SUBTASK_LIMIT_EXCEEDED' | 'SUBTASK_NOT_FOUND' | 'TASK_NOT_TIMEABLE',
     status: number
   ) {
     super(message, code, status);
   }
 }
+
+/** Statuses a task can be timed from — a finished/cancelled/archived task is done being worked on. */
+const TIMEABLE_STATUSES: TaskStatus[] = ['inbox', 'todo', 'in_progress', 'waiting'];
 
 function notFound(): never {
   throw new TaskError('Task not found', 'TASK_NOT_FOUND', 404);
@@ -572,4 +576,41 @@ export async function listTrash(ctx: WorkspaceContext): Promise<TaskListItemDto[
       task.tagIds.map((id) => tagMap.get(id.toHexString())).filter((t): t is TagRefDto => !!t)
     )
   );
+}
+
+// --- Timer (Activity Engine) -----------------------------------------------------------------
+
+/**
+ * Start a timer against a task — same "any task can be timed unless it's finished with" gate as
+ * Habit's duration-type check, just keyed on status instead of a habit type.
+ */
+export async function startTaskTimer(ctx: WorkspaceContext, id: ObjectId, input: { note?: string | null }): Promise<StartTimerResult> {
+  const task = await getOwnedTask(ctx, id);
+  if (!TIMEABLE_STATUSES.includes(task.status)) {
+    throw new TaskError('Only in-progress tasks support a timer', 'TASK_NOT_TIMEABLE', 422);
+  }
+  return startTimerForSource(ctx, {
+    sourceType: 'task',
+    sourceId: id,
+    title: task.title,
+    color: task.color,
+    note: input.note ?? null,
+  });
+}
+
+export interface StopTaskTimerResult extends StopTimerResult {
+  task: TaskDetailDto;
+}
+
+/**
+ * Stop a task's timer and roll the elapsed minutes into `actualMinutes` — the same
+ * "estimated vs. actual" comparison `estimatedMinutes` already sets up, kept in sync via the atomic
+ * `incrementActualMinutes` pipeline update rather than a read-modify-write.
+ */
+export async function stopTaskTimer(ctx: WorkspaceContext, id: ObjectId, sessionId: ObjectId): Promise<StopTaskTimerResult> {
+  await getOwnedTask(ctx, id);
+  const { session, activity } = await stopTimer(ctx, sessionId);
+  const minutes = Math.floor((session.durationSeconds ?? 0) / 60);
+  if (minutes > 0) await tasksRepository.incrementActualMinutes(id, minutes);
+  return { session, activity, task: await getTaskDetail(ctx, id) };
 }

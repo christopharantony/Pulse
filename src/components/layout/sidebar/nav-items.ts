@@ -6,6 +6,7 @@ import {
   ClipboardIcon,
   DashboardIcon,
   FlameIcon,
+  LoaderCircleIcon,
   StarIcon,
   UsersRoundIcon,
 } from '@animateicons/react/lucide';
@@ -21,6 +22,7 @@ export const navItems: NavItem[] = [
   { label: 'Tasks', href: '/tasks', icon: CheckCheckIcon },
   { label: 'Habits', href: '/habits', icon: FlameIcon },
   { label: 'Goals', href: '/goals', icon: StarIcon },
+  { label: 'Time Tracker', href: '/time-tracker', icon: LoaderCircleIcon },
   { label: 'Calendar', href: '/calendar', icon: ClipboardIcon },
   { label: 'Notes', href: '/notes', icon: BookOpenIcon },
   { label: 'Analytics', href: '/analytics', icon: ChartLineIcon },

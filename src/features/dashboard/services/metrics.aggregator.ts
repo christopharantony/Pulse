@@ -5,6 +5,7 @@ import type { Task } from '@/features/tasks/types/task';
 import { habitLogsRepository } from '@/features/habits/repositories/habit-logs.repository';
 import type { HabitLog } from '@/features/habits/types/habit-log';
 import { timeSessionRepository } from '@/features/time-tracking/repositories/time-session.repository';
+import { sumFocusSeconds } from '@/features/time-tracking/services/time-tracking-summary.service';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
 import { loadActiveHabits } from '@/features/dashboard/services/habits.aggregator';
 import { isHabitScheduledOn, habitAnchor } from '@/features/habits/services/habit-schedule';
@@ -59,15 +60,7 @@ export async function gatherTodayMetrics(ctx: WorkspaceContext): Promise<TodayMe
   ).length;
   const topCurrentStreak = habits.reduce((max, h) => Math.max(max, h.currentStreak), 0);
 
-  let focusSeconds = 0;
-  for (const session of sessions) {
-    if (session.durationSeconds != null) {
-      focusSeconds += session.durationSeconds;
-    } else if (session.endedAt == null) {
-      // The one running session — count elapsed time so "Focus Time Today" ticks live.
-      focusSeconds += Math.max(0, Math.floor((now.getTime() - session.startedAt.getTime()) / 1000));
-    }
-  }
+  const focusSeconds = sumFocusSeconds(sessions, now);
 
   return {
     todaysTasks,

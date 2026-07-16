@@ -334,6 +334,28 @@ async function bulkArchive(ids: ObjectId[]): Promise<number> {
   return result.modifiedCount;
 }
 
+/**
+ * Roll timer minutes into `actualMinutes` (the Activity Engine's reserved write target on Task —
+ * see the field's doc comment). `actualMinutes` starts `null`, so a plain `$inc` would error on the
+ * first write; a pipeline update with `$ifNull` treats that as 0 without a read-modify-write race.
+ */
+async function incrementActualMinutes(id: ObjectId, minutes: number): Promise<Task | null> {
+  const collection = await base.collection();
+  const doc = await collection.findOneAndUpdate(
+    { _id: id } as Filter<Task>,
+    [
+      {
+        $set: {
+          actualMinutes: { $add: [{ $ifNull: ['$actualMinutes', 0] }, minutes] },
+          updatedAt: new Date(),
+        },
+      },
+    ],
+    { returnDocument: 'after' }
+  );
+  return doc as Task | null;
+}
+
 export interface NewSubtaskInput {
   title: string;
   completed?: boolean;
@@ -446,6 +468,7 @@ export const tasksRepository = {
   bulkUpdate,
   bulkSoftDelete,
   bulkArchive,
+  incrementActualMinutes,
   addSubtask,
   updateSubtask,
   removeSubtask,

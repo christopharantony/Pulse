@@ -3,22 +3,22 @@
 import { PlayIcon, PauseIcon } from '@animateicons/react/lucide';
 import { Button } from '@/components/ui/button';
 import { formatElapsedTime } from '@/lib/time/format';
-import { useStartHabitTimer, useStopHabitTimer } from '@/features/habits/hooks/use-habit-timer';
+import { useStartGoalTimer, useStopGoalTimer } from '@/features/goals/hooks/use-goal-timer';
 import { useActivityTimerState } from '@/features/time-tracking/hooks/use-activity-timer-state';
 
-/** Start/stop control for a duration habit's live timer. Mirrors TaskTimerWidget/GoalTimerWidget. */
-export function HabitTimerWidget({ habitId }: { habitId: string }) {
-  const startTimer = useStartHabitTimer();
-  const stopTimer = useStopHabitTimer();
-  const { isRunning, sessionId, elapsedSeconds } = useActivityTimerState('habit', habitId);
+/** Start/stop control for a goal's live timer. Mirrors TaskTimerWidget/HabitTimerWidget. */
+export function GoalTimerWidget({ goalId }: { goalId: string }) {
+  const startTimer = useStartGoalTimer();
+  const stopTimer = useStopGoalTimer();
+  const { isRunning, sessionId, elapsedSeconds } = useActivityTimerState('goal', goalId);
 
   async function handleStart() {
-    await startTimer.mutateAsync({ id: habitId });
+    await startTimer.mutateAsync({ goalId });
   }
 
   async function handleStop() {
     if (!sessionId) return;
-    await stopTimer.mutateAsync({ id: habitId, sessionId });
+    await stopTimer.mutateAsync({ goalId, sessionId });
   }
 
   return (

@@ -74,6 +74,18 @@ describe('tasksRepository', () => {
     expect(restored?.deletedAt).toBeNull();
     expect(await tasksRepository.findById(task._id)).not.toBeNull();
   });
+
+  it('increments actualMinutes atomically from its unset (null) default', async () => {
+    const { workspaceId, userId } = ctx();
+    const task = await tasksRepository.create(workspaceId, userId, { title: 'Timed task' });
+    expect(task.actualMinutes).toBeNull();
+
+    const once = await tasksRepository.incrementActualMinutes(task._id, 15);
+    expect(once?.actualMinutes).toBe(15);
+
+    const twice = await tasksRepository.incrementActualMinutes(task._id, 10);
+    expect(twice?.actualMinutes).toBe(25);
+  });
 });
 
 describe('taskCommentsRepository', () => {

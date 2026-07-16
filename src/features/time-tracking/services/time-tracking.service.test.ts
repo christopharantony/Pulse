@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { ObjectId } from 'mongodb';
-import { startTimerForSource, stopTimer } from '@/features/time-tracking/services/time-tracking.service';
+import {
+  startStandaloneTimer,
+  startTimerForActivity,
+  startTimerForSource,
+  stopTimer,
+} from '@/features/time-tracking/services/time-tracking.service';
 import { activityRepository } from '@/features/activity/repositories/activity.repository';
 import { timeSessionRepository } from '@/features/time-tracking/repositories/time-session.repository';
 import type { WorkspaceContext } from '@/features/workspace/services/require-workspace';
@@ -99,5 +104,40 @@ describe('stopTimer', () => {
     const { session } = await startTimerForSource(owner, { sourceType: 'habit', sourceId: new ObjectId(), title: 'X' });
     const intruder = ctx();
     await expect(stopTimer(intruder, session._id)).rejects.toMatchObject({ code: 'SESSION_NOT_FOUND' });
+  });
+});
+
+describe('startStandaloneTimer', () => {
+  it('creates a distinct new Activity on every call, never de-duplicated', async () => {
+    const c = ctx();
+    const first = await startStandaloneTimer(c, { sourceType: 'quick_focus', title: 'Focus' });
+    expect(first.activity.sourceType).toBe('quick_focus');
+    expect(first.activity.sourceId).toBeNull();
+
+    const second = await startStandaloneTimer(c, { sourceType: 'quick_focus', title: 'Focus' });
+    expect(second.activity._id.equals(first.activity._id)).toBe(false);
+    // Starting a second timer auto-stops the first, same "one timer at a time" rule as source-linked timers.
+    expect(second.stoppedPrevious?._id.toHexString()).toBe(first.session._id.toHexString());
+  });
+});
+
+describe('startTimerForActivity', () => {
+  it('resumes an existing activity with a new session, without creating another activity', async () => {
+    const c = ctx();
+    const { activity } = await startStandaloneTimer(c, { sourceType: 'custom', title: 'Reading' });
+    await stopTimer(c, (await timeSessionRepository.findRunningForUser(c.userId))!._id);
+
+    const resumed = await startTimerForActivity(c, activity._id);
+    expect(resumed.activity._id.equals(activity._id)).toBe(true);
+    expect(resumed.session.activityId.equals(activity._id)).toBe(true);
+    expect(resumed.session.endedAt).toBeNull();
+  });
+
+  it('rejects resuming an activity that belongs to another workspace', async () => {
+    const owner = ctx();
+    const { activity } = await startStandaloneTimer(owner, { sourceType: 'custom', title: 'Reading' });
+
+    const intruder = ctx();
+    await expect(startTimerForActivity(intruder, activity._id)).rejects.toMatchObject({ code: 'ACTIVITY_NOT_FOUND' });
   });
 });

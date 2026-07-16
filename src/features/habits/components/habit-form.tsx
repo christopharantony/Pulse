@@ -50,6 +50,7 @@ export function HabitForm({ initial, onSubmit, onCancel, submitLabel = 'Save', i
     handleSubmit,
     watch,
     setValue,
+    setError,
     formState: { errors, isSubmitting: formSubmitting },
   } = useForm<HabitFormValues>({
     resolver: zodResolver(habitFormSchema),
@@ -83,6 +84,11 @@ export function HabitForm({ initial, onSubmit, onCancel, submitLabel = 'Save', i
   );
 
   const submit = handleSubmit(async (values) => {
+    if ((type === 'numeric' || type === 'duration') && (values.targetValue == null || Number.isNaN(values.targetValue))) {
+      setError('targetValue', { message: type === 'duration' ? 'Target minutes is required' : 'Target value is required' });
+      return;
+    }
+
     await onSubmit({
       name: values.name,
       description: values.description || null,

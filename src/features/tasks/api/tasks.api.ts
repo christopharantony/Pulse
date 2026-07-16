@@ -194,3 +194,26 @@ export async function reorderSubtasksRequest(
   });
   return data.data;
 }
+
+export interface StartTaskTimerResult {
+  sessionId: string;
+  activityId: string;
+  startedAt: string;
+  stoppedPreviousSessionId: string | null;
+}
+
+export async function startTaskTimerRequest(id: string, note?: string | null): Promise<StartTaskTimerResult> {
+  const { data } = await api.post<ApiEnvelope<StartTaskTimerResult>>(`/tasks/${id}/timer/start`, note ? { note } : undefined);
+  return data.data;
+}
+
+export interface StopTaskTimerResult {
+  sessionId: string;
+  durationSeconds: number | null;
+  totalTrackedSeconds: number;
+}
+
+export async function stopTaskTimerRequest(id: string, sessionId: string): Promise<StopTaskTimerResult> {
+  const { data } = await api.post<ApiEnvelope<StopTaskTimerResult>>(`/tasks/${id}/timer/stop`, { sessionId });
+  return data.data;
+}
